@@ -19,6 +19,7 @@ class AnalogPlot:
         self.ax = deque([0.0] * maxLen)
         self.ay = deque([0.0] * maxLen)
         self.maxLen = maxLen
+        self.strPort = strPort
 
     # add to buffer
     def addToBuf(self, buf, val):
@@ -33,7 +34,6 @@ class AnalogPlot:
         assert (len(data) == 2)
         self.addToBuf(self.ax, data[0])
         self.addToBuf(self.ay, data[1])
-        # self.addToBuf(self.ay, 50)
 
     # update plot
     def update(self, frameNum, a0, a1):
@@ -58,43 +58,65 @@ class AnalogPlot:
         self.ser.flush()
         self.ser.close()
 
+        print('exiting.')
+
     # main() function
 
-
-def main():
-
-
-    strPort = '/dev/cu.usbmodem1421'
-    # strPort = args.port
-
-    print('reading from serial port %s...' % strPort)
-
-    # plot parameters
-    analogPlot = AnalogPlot(strPort, 100)
-
-    print('plotting data...')
-
-    # set up animation
-    fig = plt.figure()
-    ax = plt.axes(xlim=(0, 100), ylim=(0, 1023))
-    a0, = ax.plot([], [])
-    a1, = ax.plot([], [])
-    ax.set(xlabel='cycles - samples/beat', ylabel='Pressure mmHg',
-           title='Analysis')
-    ax.grid()
-    anim = animation.FuncAnimation(fig, analogPlot.update,
-                                   fargs=(a0, a1),
-                                   interval=50)
-
-    # show plot
-    plt.show()
-
-    # clean up
-    analogPlot.close()
-
-    print('exiting.')
+    def Run(self):
 
 
-# call main
-if __name__ == '__main__':
-    main()
+
+        print('reading from serial port %s...' % self.strPort)
+
+        # plot parameters
+
+
+        print('plotting data...')
+
+        # set up animation
+        fig = plt.figure()
+
+
+        # host = fig.add_subplot(111)
+        # par1 = host.twinx()
+        # par1.set_ylim(0, 4)
+        # par1.set_ylabel("Temperature")
+        # color2 = plt.cm.viridis(0.5)
+        # p2, = par1.plot([0, 1, 2], [0, 3, 2], color=color2, label="Temperature")
+        # lns = [p2]
+        # host.legend(handles=lns, loc='best')
+        # par1.yaxis.label.set_color(p2.get_color())
+
+
+
+        ax = plt.axes(xlim=(0, 340), ylim=(0, 400))
+        ax2 =ax.twinx()
+        ax2.set_ylim((0, 400))
+        ax2.set_xlim((0, 340))
+
+        # ax2 =plt.axes(xlim=(0, 300), ylim=(-100, 300))
+
+        a0, = ax.plot([], [], color='blue')
+        a1, = ax2.plot([], [], color='red')
+        # ax.plot(secondary_y=True, style='g')
+        ax2.set_ylabel('Flow mL/s')
+        ax.set(xlabel='cycles - samples/beat', ylabel='Pressure mmHg',
+               title='Analysis')
+
+        ax.grid()
+        anim = animation.FuncAnimation(fig, self.update, fargs=(a0, a1), interval=50)
+
+        # show plot
+        plt.show()
+
+        # clean up
+        self.close()
+
+
+
+    # def Exit(self):
+
+
+
+
+

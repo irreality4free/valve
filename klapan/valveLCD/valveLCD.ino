@@ -16,6 +16,7 @@ int adc_key_in  = 0;
 #define btnNONE   5
 
 int wait_del = 200;
+String Menu[3] = {"1.Set HP level", "2.Set LP level", "3.Set sycle fr"};
 
 
 int HPL_val = 100;
@@ -86,32 +87,25 @@ void setup()
   delay(1000);
   lcd.clear();
 }
-bool valueChanged = true;
+bool valueChanged = false;
 long press_timer = 0;
 
-
-//void menu_select(*String s[], int size)
-//{
-//  valueChanged = true;
-//}
-void init_menu(String s){
-  lcd.setCursor(0, 0);
-        lcd.print(s);
-        
-}
 
 
 void menu_get_int(String s, int* v, int minv, int maxv)
 {
-  
+  valueChanged = true;
   int l = s.length();
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(s);
+  String erase;
+  for (int i = 0; i < 16 - l; i++) erase += " ";
   while (1) {
     if (valueChanged) {
       valueChanged = false;
-      lcd.clear();
-  init_menu(s);
-  lcd.setCursor(0, 0);
-  lcd.print(s);
+      lcd.setCursor(l, 0);
+      lcd.print(erase);
       lcd.setCursor(l, 0);
       lcd.print(*v);
     }
@@ -139,6 +133,59 @@ void menu_get_int(String s, int* v, int minv, int maxv)
   }
 }
 
+int menu_select(String Header, int Header_pos, String *paragraph, int p) {
+
+  //    lcd.clear();
+
+  lcd.clear();
+  lcd.setCursor(Header_pos, 0);
+  lcd.print(Header);
+  int menu_num = 0;
+  while (1) {
+    for (int i = 0; i < p; i++) {
+      if (menu_num == i) {
+        lcd.setCursor(Header_pos, 0);
+        lcd.print(Header);
+        lcd.setCursor(0, 1);
+        lcd.print(paragraph[i]);
+      }
+    }
+
+    lcd_key = read_LCD_buttons();
+
+    if (lcd_key == btnUP) {
+      menu_num--;
+      delay(wait_del);
+      if (menu_num < 0) {
+        menu_num = p - 1;
+      }
+    }
+
+    if (lcd_key == btnDOWN) {
+      menu_num++;
+      delay(wait_del);
+      if (menu_num > p - 1) {
+        menu_num = 0;
+      }
+    }
+
+    if (lcd_key == btnLEFT) {
+      lcd.clear();
+      delay(wait_del);
+      return -1;
+    }
+
+    if (lcd_key == btnRIGHT) {
+      lcd.clear();
+      delay(wait_del);
+      return menu_num;
+    }
+
+  }
+}
+
+
+
 
 void loop()
 {
@@ -148,75 +195,104 @@ void loop()
 
   if (lcd_key == btnRIGHT) {
     delay(wait_del);
-    lcd.clear();
+    int choise = menu_select("MENU", 6, Menu, 3);
+    Serial.print("choise - ");
+    Serial.println(choise);
 
-    int menu_num = 1;
+    if (choise == 0)  menu_get_int("HP level -", &HPL_val, HPL_min_val, HPL_max_val);
+    if (choise == 1)  menu_get_int("LP level -", &LPL_val, LPL_min_val, LPL_max_val);
+    if (choise == 2)  menu_get_int("fC -", &fC, fC_min_val, fC_max_val);
 
-//  while(1) {
-//      case menu_select ([],l):
-//      1:
-//      while(1) { 
-//      case menu_select([],l)
-//      1: get_int()
-//      2: get_int()
-//      -1: 
-//      break
-//      }
-//       -1: break
-//    }
-
-    while (1) {
-      if (menu_num == 1) {
-        lcd.setCursor(6, 0);
-        lcd.print("MENU");
-        lcd.setCursor(0, 1);
-        lcd.print("1.Set HP level");
-      }
-
-      if (menu_num == 2) {
-        lcd.setCursor(6, 0);
-        lcd.print("MENU");
-        lcd.setCursor(0, 1);
-        lcd.print("2.Set LP level");
-      }
-
-      if (menu_num == 3) {
-        lcd.setCursor(6, 0);
-        lcd.print("MENU");
-        lcd.setCursor(0, 1);
-        lcd.print("3.Set sycle fr");
-      }
-      lcd_key = read_LCD_buttons();
-
-      if (lcd_key == btnUP) {
-        menu_num--;
-        delay(wait_del);
-        if (menu_num < 1) {
-          menu_num = 3;
-        }
-      }
-
-      if (lcd_key == btnDOWN) {
-        menu_num++;
-        delay(wait_del);
-        if (menu_num > 3) {
-          menu_num = 1;
-        }
-      }
-
-      if (lcd_key == btnLEFT) {
-        lcd.clear();
-        delay(wait_del);
-        break;
-      }
-
-      if (lcd_key == btnRIGHT) {
-        if (menu_num == 1)  menu_get_int("HP level -", &HPL_val, HPL_min_val, HPL_max_val);
-        if (menu_num == 2)  menu_get_int("LP level -", &LPL_val, LPL_min_val, LPL_max_val);
-        if (menu_num == 3)  menu_get_int("fC -", &fC, fC_min_val, fC_max_val);
-       
-
-      }
-    }
   }
+
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//void MenuSel(){
+//  lcd_key = read_LCD_buttons();  // read the buttons
+//
+//  if (lcd_key == btnRIGHT) {
+//    delay(wait_del);
+//    lcd.clear();
+//
+//    int menu_num = 1;
+//
+//
+//
+//    while (1) {
+//      if (menu_num == 1) {
+//        lcd.setCursor(6, 0);
+//        lcd.print("MENU");
+//        lcd.setCursor(0, 1);
+//        lcd.print("1.Set HP level");
+//      }
+//
+//      if (menu_num == 2) {
+//        lcd.setCursor(6, 0);
+//        lcd.print("MENU");
+//        lcd.setCursor(0, 1);
+//        lcd.print("2.Set LP level");
+//      }
+//
+//      if (menu_num == 3) {
+//        lcd.setCursor(6, 0);
+//        lcd.print("MENU");
+//        lcd.setCursor(0, 1);
+//        lcd.print("3.Set sycle fr");
+//      }
+//      lcd_key = read_LCD_buttons();
+//
+//      if (lcd_key == btnUP) {
+//        menu_num--;
+//        delay(wait_del);
+//        if (menu_num < 1) {
+//          menu_num = 3;
+//        }
+//      }
+//
+//      if (lcd_key == btnDOWN) {
+//        menu_num++;
+//        delay(wait_del);
+//        if (menu_num > 3) {
+//          menu_num = 1;
+//        }
+//      }
+//
+//      if (lcd_key == btnLEFT) {
+//        lcd.clear();
+//        delay(wait_del);
+//        break;
+//      }
+//      if (lcd_key == btnRIGHT) {
+//        if (menu_num == 1)  menu_get_int("HP level -", &HPL_val, HPL_min_val, HPL_max_val);
+//        if (menu_num == 2)  menu_get_int("LP level -", &LPL_val, LPL_min_val, LPL_max_val);
+//        if (menu_num == 3)  menu_get_int("fC -", &fC, fC_min_val, fC_max_val);
+//
+//
+//      }
+//    }
+//  }
+//
+//}

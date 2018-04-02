@@ -1,6 +1,10 @@
 //Sample using LiquidCrystal library
 #include <LiquidCrystal.h>
+
+#include <SPI.h>
+#include <SD.h>
 #define REPEAT_DELAY 300
+File myFile;
 
 
 LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
@@ -17,6 +21,10 @@ int adc_key_in  = 0;
 
 int wait_del = 200;
 String Menu[3] = {"1.Set HP level", "2.Set LP level", "3.Set sycle fr"};
+
+
+bool valueChanged = false;
+long press_timer = 0;
 
 
 int HPL_val = 100;
@@ -81,14 +89,71 @@ void MainScreen() {
 void setup()
 {
   Serial.begin(9600);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for native USB port only
+  }
+   Serial.print("Initializing SD card...");
+
+  if (!SD.begin(2)) {
+    Serial.println("initialization failed!");
+    return;
+  }
+  Serial.println("initialization done.");
+
+
+
+
+
+
+  
   lcd.begin(16, 2);              // start the library
   lcd.setCursor(4, 0);
   lcd.print("LAR TECH");
   delay(1000);
   lcd.clear();
 }
-bool valueChanged = false;
-long press_timer = 0;
+
+
+
+void WriteFile(String f_name, String s_write){
+myFile = SD.open(f_name, FILE_WRITE);
+
+  // if the file opened okay, write to it:
+  if (myFile) {
+    Serial.print("Writing to ");
+    Serial.print(f_name);
+    Serial.print(" ... ");
+    myFile.println(s_write);
+    // close the file:
+    myFile.close();
+    Serial.println("done.");
+  } else {
+    // if the file didn't open, print an error:
+    Serial.println("error opening test.txt");
+  }
+}
+
+
+void ReadFile(String f_name){
+  // re-open the file for reading:
+  myFile = SD.open(f_name);
+  if (myFile) {
+    
+    Serial.print(f_name);
+    Serial.print(": ");
+
+    // read from the file until there's nothing else in it:
+    while (myFile.available()) {
+      Serial.write(myFile.read());
+    }
+    // close the file:
+    myFile.close();
+  } else {
+    // if the file didn't open, print an error:
+    Serial.println("error opening test.txt");
+  }
+}
+
 
 
 
@@ -211,88 +276,3 @@ void loop()
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//void MenuSel(){
-//  lcd_key = read_LCD_buttons();  // read the buttons
-//
-//  if (lcd_key == btnRIGHT) {
-//    delay(wait_del);
-//    lcd.clear();
-//
-//    int menu_num = 1;
-//
-//
-//
-//    while (1) {
-//      if (menu_num == 1) {
-//        lcd.setCursor(6, 0);
-//        lcd.print("MENU");
-//        lcd.setCursor(0, 1);
-//        lcd.print("1.Set HP level");
-//      }
-//
-//      if (menu_num == 2) {
-//        lcd.setCursor(6, 0);
-//        lcd.print("MENU");
-//        lcd.setCursor(0, 1);
-//        lcd.print("2.Set LP level");
-//      }
-//
-//      if (menu_num == 3) {
-//        lcd.setCursor(6, 0);
-//        lcd.print("MENU");
-//        lcd.setCursor(0, 1);
-//        lcd.print("3.Set sycle fr");
-//      }
-//      lcd_key = read_LCD_buttons();
-//
-//      if (lcd_key == btnUP) {
-//        menu_num--;
-//        delay(wait_del);
-//        if (menu_num < 1) {
-//          menu_num = 3;
-//        }
-//      }
-//
-//      if (lcd_key == btnDOWN) {
-//        menu_num++;
-//        delay(wait_del);
-//        if (menu_num > 3) {
-//          menu_num = 1;
-//        }
-//      }
-//
-//      if (lcd_key == btnLEFT) {
-//        lcd.clear();
-//        delay(wait_del);
-//        break;
-//      }
-//      if (lcd_key == btnRIGHT) {
-//        if (menu_num == 1)  menu_get_int("HP level -", &HPL_val, HPL_min_val, HPL_max_val);
-//        if (menu_num == 2)  menu_get_int("LP level -", &LPL_val, LPL_min_val, LPL_max_val);
-//        if (menu_num == 3)  menu_get_int("fC -", &fC, fC_min_val, fC_max_val);
-//
-//
-//      }
-//    }
-//  }
-//
-//}

@@ -3,7 +3,8 @@
 
 #include <SPI.h>
 #include <SD.h>
-#define REPEAT_DELAY 300
+#include <EEPROM.h>
+int REPEAT_DELAY = 300;
 File myFile;
 
 
@@ -20,6 +21,7 @@ int adc_key_in  = 0;
 #define btnNONE   5
 
 int wait_del = 200;
+int minIntDelay = 50;
 String Menu[3] = {"1.Set HP level", "2.Set LP level", "3.Set sycle fr"};
 
 
@@ -37,6 +39,8 @@ int fC = 1000;
 int fC_min_val = 0;
 int fC_max_val = 1000;
 int nC = 1;
+
+int LREPEAT_DELAY;
 
 // read the buttons
 int read_LCD_buttons()
@@ -92,7 +96,7 @@ void setup()
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
   }
-   Serial.print("Initializing SD card...");
+  Serial.print("Initializing SD card...");
 
   if (!SD.begin(2)) {
     Serial.println("initialization failed!");
@@ -102,21 +106,29 @@ void setup()
 
 
 
+  //если память пустая меняем значения на 0 -- должно отработатьдолжно отработать при первой прошивке контроллера
+  if (EEPROM.read(9) > 180) {
+    for (int i = 0; i < 15; i++) {
+      EEPROM.write(i, 0);
+    }
+  }
 
 
 
-  
+  read_params();
+
   lcd.begin(16, 2);              // start the library
   lcd.setCursor(4, 0);
   lcd.print("LAR TECH");
   delay(1000);
   lcd.clear();
+
 }
 
 
 
-void WriteFile(String f_name, String s_write){
-myFile = SD.open(f_name, FILE_WRITE);
+void WriteFile(String f_name, String s_write) {
+  myFile = SD.open(f_name, FILE_WRITE);
 
   // if the file opened okay, write to it:
   if (myFile) {
@@ -134,11 +146,11 @@ myFile = SD.open(f_name, FILE_WRITE);
 }
 
 
-void ReadFile(String f_name){
+void ReadFile(String f_name) {
   // re-open the file for reading:
   myFile = SD.open(f_name);
   if (myFile) {
-    
+
     Serial.print(f_name);
     Serial.print(": ");
 
@@ -159,6 +171,7 @@ void ReadFile(String f_name){
 
 void menu_get_int(String s, int* v, int minv, int maxv)
 {
+  LREPEAT_DELAY = 300;
   valueChanged = true;
   int l = s.length();
   lcd.clear();
@@ -177,14 +190,24 @@ void menu_get_int(String s, int* v, int minv, int maxv)
     if (press_timer < millis())
     {
       lcd_key = read_LCD_buttons();
+//     Serial.println( read_LCD_buttons());
+      if (read_LCD_buttons() == 5 && read_LCD_buttons() == 5 && read_LCD_buttons() == 5 && read_LCD_buttons() == 5 && read_LCD_buttons() == 5 && read_LCD_buttons() == 5 && read_LCD_buttons() == 5 && read_LCD_buttons() == 5 && read_LCD_buttons() == 5 ) LREPEAT_DELAY = 300;
       if (lcd_key == btnDOWN) {
-        press_timer = millis() + REPEAT_DELAY;
+        press_timer = millis() + LREPEAT_DELAY;
+        LREPEAT_DELAY-=10;
+        if (LREPEAT_DELAY < minIntDelay) {
+          LREPEAT_DELAY = minIntDelay;
+        }
         (*v)--;
         if (*v < minv) *v = minv;
         valueChanged = true;
       }
       if (lcd_key == btnUP) {
-        press_timer = millis() + REPEAT_DELAY;
+        press_timer = millis() + LREPEAT_DELAY;
+        LREPEAT_DELAY-=10;
+        if (LREPEAT_DELAY < minIntDelay) {
+          LREPEAT_DELAY = minIntDelay;
+        }
         (*v)++;
         if (*v > maxv) *v = maxv;
         valueChanged = true;
@@ -192,20 +215,22 @@ void menu_get_int(String s, int* v, int minv, int maxv)
 
       if (lcd_key == btnLEFT) {
         lcd.clear();
+        save_params();
         return;
       }
     }
   }
 }
 
-int menu_select(String Header, int Header_pos, String *paragraph, int p) {
+int menu_select(String Header, int Header_pos, String *paragraph, int p, int start) {
 
   //    lcd.clear();
 
   lcd.clear();
   lcd.setCursor(Header_pos, 0);
   lcd.print(Header);
-  int menu_num = 0;
+  int menu_num = start;
+  int last_key = btnLEFT;
   while (1) {
     for (int i = 0; i < p; i++) {
       if (menu_num == i) {
@@ -234,7 +259,7 @@ int menu_select(String Header, int Header_pos, String *paragraph, int p) {
       }
     }
 
-    if (lcd_key == btnLEFT) {
+    if (lcd_key == btnLEFT && last_key != btnLEFT) {
       lcd.clear();
       delay(wait_del);
       return -1;
@@ -245,10 +270,37 @@ int menu_select(String Header, int Header_pos, String *paragraph, int p) {
       delay(wait_del);
       return menu_num;
     }
-
+    last_key = lcd_key;
   }
 }
 
+void save_params() {
+  EEPROM_uint_write(0, HPL_val);
+  EEPROM_uint_write(2, LPL_val);
+  EEPROM_uint_write(4, fC);
+}
+
+
+void read_params() {
+  HPL_val = EEPROM_uint_read (0);
+  LPL_val = EEPROM_uint_read (2);
+  fC = EEPROM_uint_read (4);
+}
+
+
+
+unsigned int EEPROM_uint_read(int addr) {
+  byte raw[2];
+  for (byte i = 0; i < 2; i++) raw[i] = EEPROM.read(addr + i);
+  unsigned int &num = (unsigned int&)raw;
+  return num;
+}
+// запись
+void EEPROM_uint_write(int addr, unsigned int num) {
+  byte raw[2];
+  (unsigned int&)raw = num;
+  for (byte i = 0; i < 2; i++) EEPROM.write(addr + i, raw[i]);
+}
 
 
 
@@ -260,13 +312,19 @@ void loop()
 
   if (lcd_key == btnRIGHT) {
     delay(wait_del);
-    int choise = menu_select("MENU", 6, Menu, 3);
-    Serial.print("choise - ");
-    Serial.println(choise);
 
-    if (choise == 0)  menu_get_int("HP level -", &HPL_val, HPL_min_val, HPL_max_val);
-    if (choise == 1)  menu_get_int("LP level -", &LPL_val, LPL_min_val, LPL_max_val);
-    if (choise == 2)  menu_get_int("fC -", &fC, fC_min_val, fC_max_val);
+    int choise = 0;
+    while (1) {
+      choise = menu_select("MENU", 6, Menu, 3, choise);
+      if (choise == -1) {
+        break;
+        delay(200);
+      }
+      if (choise == 0)  menu_get_int("HP level -", &HPL_val, HPL_min_val, HPL_max_val);
+      if (choise == 1)  menu_get_int("LP level -", &LPL_val, LPL_min_val, LPL_max_val);
+      if (choise == 2)  menu_get_int("fC -", &fC, fC_min_val, fC_max_val);
+
+    }
 
   }
 
